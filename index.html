@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Monitora e gestisci i tuoi investimenti con calcolo automatico delle tasse italiane">
+    <meta name="keywords" content="investimenti, portfolio, tasse, capital gains, finanza, italia">
+    <meta name="author" content="MyInvestments">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="MyInvestments">
+    
+    <title>MyInvestments - Monitora i tuoi investimenti</title>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1><i class="fas fa-chart-line"></i> MyInvestments</h1>
+            <p>Monitora e gestisci i tuoi investimenti</p>
+        </header>
+
+        <!-- Dashboard Overview -->
+        <section class="dashboard">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Patrimonio Totale</h3>
+                        <p class="stat-value" id="totalPortfolio">€0.00</p>
+                        <small>Include investimenti + vendite + dividendi</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Investito Attualmente</h3>
+                        <p class="stat-value" id="totalInvested">€0.00</p>
+                        <small>Investimenti ancora attivi</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Guadagno Totale</h3>
+                        <p class="stat-value" id="totalGainLoss">€0.00</p>
+                        <small>Capital gains + dividendi</small>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3>Rendimento %</h3>
+                        <p class="stat-value" id="totalReturn">0.00%</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="investments">
+                <i class="fas fa-list"></i> Investimenti
+            </button>
+            <button class="tab-btn" data-tab="add">
+                <i class="fas fa-plus"></i> Aggiungi
+            </button>
+            <button class="tab-btn" data-tab="charts">
+                <i class="fas fa-chart-bar"></i> Grafici
+            </button>
+            <button class="tab-btn" data-tab="dividends">
+                <i class="fas fa-coins"></i> Dividendi
+            </button>
+            <button class="tab-btn" data-tab="divestments">
+                <i class="fas fa-arrow-down"></i> Disinvestimenti
+            </button>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="tab-content">
+            <!-- Investments Tab -->
+            <div id="investments" class="tab-pane active">
+                <div class="section-header">
+                    <h2>I Miei Investimenti</h2>
+                    <div class="filters">
+                        <select id="typeFilter">
+                            <option value="">Tutti i tipi</option>
+                            <option value="fondo">Fondi</option>
+                            <option value="azione">Azioni</option>
+                            <option value="azione-dividendi">Azioni con Dividendi</option>
+                            <option value="etf">ETF</option>
+                            <option value="etf-dividendi">ETF con Dividendi</option>
+                            <option value="obbligazione">Obbligazioni</option>
+                            <option value="reit">REIT</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="app.exportData()" title="Esporta dati (Ctrl+E)">
+                            <i class="fas fa-download"></i> Esporta
+                        </button>
+                    </div>
+                </div>
+                <div class="investments-grid" id="investmentsList">
+                    <div class="empty-state">
+                        <i class="fas fa-chart-pie"></i>
+                        <h3>Nessun investimento trovato</h3>
+                        <p>Inizia aggiungendo il tuo primo investimento!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Investment Tab -->
+            <div id="add" class="tab-pane">
+                <div class="form-container">
+                    <h2>Aggiungi Nuovo Investimento</h2>
+                    
+                    <!-- Investment Mode Selector -->
+                    <div class="investment-mode-selector">
+                        <div class="mode-tabs">
+                            <button type="button" class="mode-tab active" data-mode="new">
+                                <i class="fas fa-plus"></i> Nuovo Investimento
+                            </button>
+                            <button type="button" class="mode-tab" data-mode="existing">
+                                <i class="fas fa-history"></i> Investimento Esistente
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <form id="addInvestmentForm">
+                        <div class="form-group">
+                            <label for="investmentName">Nome Investimento</label>
+                            <input type="text" id="investmentName" required placeholder="es. Fondo Azionario Europa">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="investmentType">Tipo</label>
+                                <select id="investmentType" required>
+                                    <option value="">Seleziona tipo</option>
+                                    <option value="fondo">Fondo Comune</option>
+                                    <option value="azione">Azione</option>
+                                    <option value="azione-dividendi">Azione con Dividendi</option>
+                                    <option value="etf">ETF</option>
+                                    <option value="etf-dividendi">ETF con Dividendi</option>
+                                    <option value="obbligazione">Obbligazione</option>
+                                    <option value="reit">REIT</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="investmentDate">Data Acquisto</label>
+                                <input type="date" id="investmentDate" required>
+                            </div>
+                        </div>
+
+                        <!-- New Investment Mode -->
+                        <div id="newInvestmentMode" class="investment-mode">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="investmentAmount">Importo Investito (€)</label>
+                                    <input type="number" id="investmentAmount" step="0.01" placeholder="1000.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="investmentQuantity">Quantità (opzionale)</label>
+                                    <input type="number" id="investmentQuantity" step="0.001" placeholder="es. 50 quote">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Existing Investment Mode -->
+                        <div id="existingInvestmentMode" class="investment-mode" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="currentValue">Valore Attuale (€)</label>
+                                    <input type="number" id="currentValue" step="0.01" placeholder="1200.00">
+                                </div>
+                                <div class="form-group">
+                                    <label for="performancePercent">Variazione % dal acquisto</label>
+                                    <input type="number" id="performancePercent" step="0.01" placeholder="20.5">
+                                    <small class="form-hint">Inserisci % positiva per guadagno, negativa per perdita</small>
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="existingQuantity">Quantità (opzionale)</label>
+                                    <input type="number" id="existingQuantity" step="0.001" placeholder="es. 50 quote">
+                                </div>
+                                <div class="form-group calculated-field">
+                                    <label>Importo Originale Calcolato</label>
+                                    <div class="calculated-value" id="calculatedOriginalAmount">€0.00</div>
+                                    <small class="form-hint">Calcolato automaticamente in base ai valori inseriti</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="investmentNotes">Note (opzionale)</label>
+                            <textarea id="investmentNotes" placeholder="Aggiungi note o descrizione..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Aggiungi Investimento
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Charts Tab -->
+            <div id="charts" class="tab-pane">
+                <div class="charts-container">
+                    <h2>Analisi Grafici</h2>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>Distribuzione per Tipo</h3>
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Performance nel Tempo</h3>
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dividends Tab -->
+            <div id="dividends" class="tab-pane">
+                <div class="section-header">
+                    <h2>Gestione Dividendi</h2>
+                </div>
+                
+                <!-- Add Dividend Form -->
+                <div class="dividend-form-section">
+                    <h3>Registra Nuovo Dividendo</h3>
+                    <form id="dividendForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="selectDividendInvestment">Seleziona Investimento</label>
+                                <select id="selectDividendInvestment" required>
+                                    <option value="">Scegli un investimento con dividendi</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dividendDate">Data Stacco Dividendo</label>
+                                <input type="date" id="dividendDate" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="dividendAmount">Importo Dividendo (€)</label>
+                                <input type="number" id="dividendAmount" step="0.01" required placeholder="50.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="dividendTaxes">Tasse Trattenute (€)</label>
+                                <input type="number" id="dividendTaxes" step="0.01" placeholder="13.00">
+                                <small class="form-hint">Importo delle tasse già trattenute alla fonte</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dividendNotes">Note (opzionale)</label>
+                            <textarea id="dividendNotes" placeholder="Note sul dividendo (es. trimestrale, straordinario...)"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-coins"></i> Registra Dividendo
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Dividend Summary -->
+                <div class="dividend-summary-section">
+                    <h3>Riepilogo Dividendi</h3>
+                    <div class="dividend-stats">
+                        <div class="dividend-stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4>Dividendi Totali</h4>
+                                <p class="stat-value" id="totalDividends">€0.00</p>
+                            </div>
+                        </div>
+                        <div class="dividend-stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-hand-holding-usd"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4>Dividendi Netti</h4>
+                                <p class="stat-value" id="netDividends">€0.00</p>
+                            </div>
+                        </div>
+                        <div class="dividend-stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-receipt"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4>Tasse Pagate</h4>
+                                <p class="stat-value" id="dividendTaxesPaid">€0.00</p>
+                            </div>
+                        </div>
+                        <div class="dividend-stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h4>Yield Medio</h4>
+                                <p class="stat-value" id="averageYield">0.00%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dividends History -->
+                <div class="dividends-history">
+                    <h3>Storico Dividendi</h3>
+                    <div class="dividends-filter">
+                        <select id="dividendYearFilter">
+                            <option value="">Tutti gli anni</option>
+                        </select>
+                        <select id="dividendInvestmentFilter">
+                            <option value="">Tutti gli investimenti</option>
+                        </select>
+                    </div>
+                    <div id="dividendsList">
+                        <div class="empty-state">
+                            <i class="fas fa-coins"></i>
+                            <h4>Nessun dividendo registrato</h4>
+                            <p>Inizia registrando il tuo primo dividendo!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Divestments Tab -->
+            <div id="divestments" class="tab-pane">
+                <div class="section-header">
+                    <h2>Gestione Disinvestimenti</h2>
+                </div>
+                
+                <!-- Divestment Form -->
+                <div class="divestment-form-section">
+                    <h3>Effettua Disinvestimento</h3>
+                    <form id="divestmentForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="selectInvestment">Seleziona Investimento</label>
+                                <select id="selectInvestment" required>
+                                    <option value="">Scegli un investimento</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="divestmentDate">Data Disinvestimento</label>
+                                <input type="date" id="divestmentDate" required>
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="divestmentType">Tipo Disinvestimento</label>
+                                <select id="divestmentType" required>
+                                    <option value="">Seleziona tipo</option>
+                                    <option value="partial">Parziale</option>
+                                    <option value="total">Totale</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="partialAmountGroup" style="display: none;">
+                                <label for="divestmentAmount">Importo Disinvestito (€)</label>
+                                <input type="number" id="divestmentAmount" step="0.01" placeholder="500.00">
+                            </div>
+                        </div>
+                        
+                        <div class="investment-summary" id="investmentSummary" style="display: none;">
+                            <h4>Riepilogo Investimento Selezionato</h4>
+                            <div class="summary-grid">
+                                <div class="summary-item">
+                                    <span>Importo Investito:</span>
+                                    <span id="summaryOriginalAmount">€0.00</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Valore Attuale:</span>
+                                    <span id="summaryCurrentValue">€0.00</span>
+                                </div>
+                                <div class="summary-item">
+                                    <span>Guadagno/Perdita:</span>
+                                    <span id="summaryGainLoss">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-arrow-down"></i> Calcola e Registra Disinvestimento
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Divestment Results -->
+                <div class="divestment-results" id="divestmentResults" style="display: none;">
+                    <h3>Risultati Disinvestimento</h3>
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <h4>Calcoli Fiscali</h4>
+                            <div class="result-grid">
+                                <div class="result-item">
+                                    <span>Importo Disinvestito:</span>
+                                    <span id="resultDivestedAmount">€0.00</span>
+                                </div>
+                                <div class="result-item">
+                                    <span>Costo Originale:</span>
+                                    <span id="resultOriginalCost">€0.00</span>
+                                </div>
+                                <div class="result-item">
+                                    <span>Guadagno Lordo:</span>
+                                    <span id="resultGrossGain">€0.00</span>
+                                </div>
+                                <div class="result-item">
+                                    <span>Tasse (26%):</span>
+                                    <span id="resultTaxes">€0.00</span>
+                                </div>
+                                <div class="result-item strong">
+                                    <span>Guadagno Netto:</span>
+                                    <span id="resultNetGain">€0.00</span>
+                                </div>
+                                <div class="result-item strong">
+                                    <span>Incasso Totale:</span>
+                                    <span id="resultTotalCash">€0.00</span>
+                                </div>
+                            </div>
+                            <div class="result-actions">
+                                <button type="button" class="btn btn-primary" id="confirmDivestment">
+                                    <i class="fas fa-check"></i> Conferma Disinvestimento
+                                </button>
+                                <button type="button" class="btn btn-secondary" id="cancelDivestment">
+                                    <i class="fas fa-times"></i> Annulla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="divestment-calculator">
+                    <h3>Calcolo Tasse su Disinvestimento</h3>
+                    <div class="calculator-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Prezzo di Acquisto (€)</label>
+                                <input type="number" id="buyPrice" step="0.01" placeholder="100.00">
+                            </div>
+                            <div class="form-group">
+                                <label>Prezzo di Vendita (€)</label>
+                                <input type="number" id="sellPrice" step="0.01" placeholder="120.00">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Quantità</label>
+                                <input type="number" id="quantity" step="0.001" placeholder="10">
+                            </div>
+                            <div class="form-group">
+                                <label>Aliquota Tasse (%)</label>
+                                <input type="number" id="taxRate" value="26" step="0.1" placeholder="26">
+                            </div>
+                        </div>
+                        <button type="button" id="calculateTaxes" class="btn btn-secondary">
+                            <i class="fas fa-calculator"></i> Calcola
+                        </button>
+                    </div>
+                    <div class="tax-results" id="taxResults" style="display: none;">
+                        <div class="result-card">
+                            <h4>Risultati Calcolo</h4>
+                            <div class="result-grid">
+                                <div class="result-item">
+                                    <span>Guadagno Lordo:</span>
+                                    <span id="grossGain">€0.00</span>
+                                </div>
+                                <div class="result-item">
+                                    <span>Tasse (26%):</span>
+                                    <span id="taxes">€0.00</span>
+                                </div>
+                                <div class="result-item strong">
+                                    <span>Guadagno Netto:</span>
+                                    <span id="netGain">€0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="divestments-history">
+                    <h3>Storico Disinvestimenti</h3>
+                    <div id="divestmentsList">
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <h4>Nessun disinvestimento registrato</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Investment Updates -->
+    <div id="updateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Aggiorna Investimento</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="updateInvestmentForm">
+                    <input type="hidden" id="updateInvestmentId">
+                    <div class="form-group">
+                        <label for="updateCurrentValue">Valore Attuale (€)</label>
+                        <input type="number" id="updateCurrentValue" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="updateDate">Data Aggiornamento</label>
+                        <input type="date" id="updateDate" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" id="cancelUpdate">Annulla</button>
+                        <button type="submit" class="btn btn-primary">Aggiorna</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
